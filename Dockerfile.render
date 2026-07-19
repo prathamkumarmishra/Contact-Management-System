@@ -1,0 +1,36 @@
+# ============================================
+# Stage 1: Build C++ Algorithm Engine
+# ============================================
+FROM gcc:13 AS cpp-build
+
+WORKDIR /cpp-engine
+
+RUN apt-get update && apt-get install -y cmake git
+
+COPY cpp-engine/ .
+
+RUN mkdir -p build && cd build && cmake .. && cmake --build . -j$(nproc)
+
+# ============================================
+# Stage 2: Build Backend + Bundle C++ Binary
+# ============================================
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install runtime libs for C++ binary
+RUN apt-get update && apt-get install -y libstdc++6 && rm -rf /var/lib/apt/lists/*
+
+# Copy backend
+COPY backend/package*.json ./
+RUN npm ci --production
+
+COPY backend/ .
+
+# Copy compiled C++ engine binary
+COPY --from=cpp-build /cpp-engine/build/contact-engine /app/cpp-engine/contact-engine
+RUN chmod +x /app/cpp-engine/contact-engine
+
+EXPOSE 5000
+
+CMD ["node", "src/server.js"]

@@ -1,0 +1,382 @@
+{
+  "info": {
+    "name": "Smart Contact Management System",
+    "description": "Complete API collection for the Smart Contact Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecureP@ss123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"SecureP@ss123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/verify-otp",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"otp\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/reset-password",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resetToken\": \"token_here\",\n  \"newPassword\": \"NewP@ss456\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contacts",
+      "item": [
+        {
+          "name": "Create Contact",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/contacts",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"phone\": \"+1-555-0123\",\n  \"email\": \"jane@company.com\",\n  \"company\": \"TechCorp\",\n  \"designation\": \"Senior Developer\",\n  \"category\": \"work\",\n  \"city\": \"San Francisco\",\n  \"tags\": [\"developer\", \"react\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "List Contacts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/contacts?page=1&limit=20&sort=-createdAt",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "sort", "value": "-createdAt" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Contact",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/contacts/:id"
+          }
+        },
+        {
+          "name": "Update Contact",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/contacts/:id",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"NewTechCorp\",\n  \"designation\": \"Lead Developer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Contact",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/contacts/:id"
+          }
+        },
+        {
+          "name": "Restore Contact",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/contacts/:id/restore"
+          }
+        },
+        {
+          "name": "Bulk Delete",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/contacts/bulk",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contactIds\": [\"id1\", \"id2\", \"id3\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Toggle Favorite",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/contacts/:id/favorite"
+          }
+        },
+        {
+          "name": "Toggle Block",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/contacts/:id/block"
+          }
+        },
+        {
+          "name": "Get Favorites",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/contacts/favorites"
+          }
+        },
+        {
+          "name": "Get Trash",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/contacts/trash"
+          }
+        },
+        {
+          "name": "Detect Duplicates",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/contacts/duplicates"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Autocomplete",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/search/autocomplete?q=Jo&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "autocomplete"],
+              "query": [
+                { "key": "q", "value": "Jo" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Global Search",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/search?q=John&category=work",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "John" },
+                { "key": "category", "value": "work" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search History",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/search/history"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard"
+          }
+        },
+        {
+          "name": "Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/statistics"
+          }
+        },
+        {
+          "name": "Chart Data",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/charts"
+          }
+        },
+        {
+          "name": "Activity Timeline",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/activity?limit=20"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Import & Export",
+      "item": [
+        {
+          "name": "Import Contacts",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/contacts/import",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export as CSV",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/contacts/export/csv"
+          }
+        },
+        {
+          "name": "Export as Excel",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/contacts/export/excel"
+          }
+        },
+        {
+          "name": "Export as PDF",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/contacts/export/pdf"
+          }
+        },
+        {
+          "name": "Export as JSON",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/contacts/export/json"
+          }
+        }
+      ]
+    }
+  ]
+}

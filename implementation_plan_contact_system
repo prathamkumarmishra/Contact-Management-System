@@ -1,0 +1,401 @@
+# Phase 1: Smart Contact Management System — Requirement Analysis, Architecture & Design
+
+## Overview
+
+Building an enterprise-grade Smart Contact Management System — a full-stack SaaS platform combining **React 19 + TypeScript** frontend, **Node.js + Express + MongoDB** backend, and a **C++17 Algorithm Engine** for high-performance DSA operations (Trie search, merge sort, duplicate detection, etc.).
+
+This phase covers requirement analysis, architecture decisions, database schema design, folder scaffolding, and documentation diagrams. **No application code is written in this phase** — only the project skeleton and design documents.
+
+---
+
+## Proposed Changes
+
+### 1. Monorepo Folder Structure
+
+We scaffold the entire directory tree so every future file has a clear home. The project follows a **clean monorepo** pattern with strict separation:
+
+| Folder | Purpose |
+|---|---|
+| `frontend/` | React 19 + TypeScript + Vite + Tailwind CSS + shadcn/ui |
+| `backend/` | Node.js + Express + MongoDB + JWT + Socket.io |
+| `cpp-engine/` | C++17 DSA algorithms (Trie, BST, HashMap, Stack, Queue, Sort, Search, Graph) |
+| `docs/` | ER diagrams, flowcharts, class diagrams, sequence diagrams, API docs |
+| `postman/` | Postman API collection |
+| `docker/` | Dockerfile & docker-compose configs |
+
+#### Full Directory Tree
+
+```
+Smart-Contact-Management-System/
+│
+├── frontend/
+│   ├── public/
+│   │   └── favicon.svg
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   │   ├── common/          → Button, Modal, Input, Skeleton, Toast, EmptyState
+│   │   │   ├── layout/          → Sidebar, Navbar, Footer, ThemeToggle
+│   │   │   ├── forms/           → ContactForm, LoginForm, RegisterForm, SearchBar
+│   │   │   ├── dashboard/       → StatCard, ChartWidget, RecentContacts, QuickActions
+│   │   │   └── contacts/        → ContactCard, ContactList, ContactDetail, ContactTable
+│   │   ├── pages/               → Landing, Login, Register, ForgotPassword, Dashboard,
+│   │   │                          Contacts, AddContact, EditContact, Profile, Settings,
+│   │   │                          Statistics, About, NotFound
+│   │   ├── hooks/               → useAuth, useContacts, useSearch, useDebounce, useTheme
+│   │   ├── context/             → ThemeContext, AuthContext
+│   │   ├── redux/               → store, slices (auth, contacts, ui, search)
+│   │   ├── services/            → authService, contactService, dashboardService
+│   │   ├── api/                 → axiosInstance, endpoints, interceptors
+│   │   ├── utils/               → formatters, validators, helpers, constants
+│   │   ├── types/               → contact.ts, auth.ts, api.ts, dashboard.ts
+│   │   ├── constants/           → routes, apiPaths, themes, categories
+│   │   ├── styles/              → globals.css, animations.css
+│   │   ├── routes/              → AppRouter.tsx, ProtectedRoute.tsx
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── index.html
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.ts
+│   ├── postcss.config.js
+│   ├── components.json          → shadcn/ui config
+│   └── README.md
+│
+├── backend/
+│   ├── src/
+│   │   ├── config/              → db.js, cloudinary.js, redis.js, env.js
+│   │   ├── controllers/         → authController, contactController, dashboardController
+│   │   ├── routes/              → authRoutes, contactRoutes, dashboardRoutes, index
+│   │   ├── middleware/          → auth, errorHandler, rateLimiter, upload, validate
+│   │   ├── models/              → User, Contact, SearchHistory, ActivityLog
+│   │   ├── services/            → authService, contactService, cppBridge, emailService
+│   │   ├── repositories/        → userRepo, contactRepo
+│   │   ├── validators/          → authValidator, contactValidator
+│   │   ├── utils/               → logger, responseHandler, tokenUtils, fileUtils
+│   │   ├── sockets/             → socketHandler.js
+│   │   ├── jobs/                → cleanupJob.js, emailJob.js
+│   │   ├── uploads/             → (runtime directory for file uploads)
+│   │   ├── logs/                → (runtime directory for log files)
+│   │   ├── database/            → seed.js, migrations/
+│   │   ├── cpp-engine/          → bridge.js (Node.js ↔ C++ interface via child_process)
+│   │   ├── app.js
+│   │   └── server.js
+│   ├── package.json
+│   ├── .env.example
+│   └── README.md
+│
+├── cpp-engine/
+│   ├── include/
+│   │   ├── Contact.h
+│   │   ├── Trie.h
+│   │   ├── BST.h
+│   │   ├── HashMap.h
+│   │   ├── Stack.h
+│   │   ├── Queue.h
+│   │   ├── Sorting.h
+│   │   ├── Search.h
+│   │   ├── Graph.h
+│   │   └── PriorityQueue.h
+│   ├── src/
+│   │   ├── Trie/                → Trie.cpp (autocomplete, prefix search)
+│   │   ├── BST/                 → BST.cpp (alphabetical storage & range queries)
+│   │   ├── HashMap/             → HashMap.cpp (O(1) duplicate detection)
+│   │   ├── Stack/               → Stack.cpp (undo delete operations)
+│   │   ├── Queue/               → Queue.cpp (search history FIFO)
+│   │   ├── Sorting/             → MergeSort.cpp, QuickSort.cpp
+│   │   ├── Search/              → BinarySearch.cpp
+│   │   ├── Graph/               → Graph.cpp (relationship suggestions)
+│   │   ├── Contact/             → Contact.cpp (data model)
+│   │   └── main.cpp             → CLI interface for REST bridge
+│   ├── CMakeLists.txt
+│   └── README.md
+│
+├── docs/
+│   ├── ER-Diagram/
+│   │   └── er-diagram.md
+│   ├── Flowchart/
+│   │   └── flowchart.md
+│   ├── Class-Diagram/
+│   │   └── class-diagram.md
+│   ├── Sequence-Diagram/
+│   │   └── sequence-diagram.md
+│   ├── Screenshots/
+│   └── API-Documentation/
+│       └── api-docs.md
+│
+├── postman/
+│   └── Smart-Contact-Management.postman_collection.json
+│
+├── docker/
+│   ├── Dockerfile.frontend
+│   ├── Dockerfile.backend
+│   └── Dockerfile.cpp-engine
+│
+├── .gitignore
+├── docker-compose.yml
+├── LICENSE
+└── README.md
+```
+
+---
+
+### 2. Database Schema Design (MongoDB)
+
+#### User Collection
+
+| Field | Type | Constraints |
+|---|---|---|
+| `_id` | ObjectId | Auto-generated |
+| `firstName` | String | Required, 2-50 chars |
+| `lastName` | String | Required, 2-50 chars |
+| `email` | String | Required, unique, valid email |
+| `password` | String | Required, hashed (bcrypt, 12 rounds) |
+| `avatar` | String | Cloudinary URL |
+| `role` | String | Enum: `admin`, `user`. Default: `user` |
+| `isVerified` | Boolean | Default: `false` |
+| `otp` | String | 6-digit OTP for verification |
+| `otpExpiry` | Date | OTP expiration timestamp |
+| `refreshToken` | String | JWT refresh token |
+| `lastLogin` | Date | Timestamp |
+| `createdAt` | Date | Auto |
+| `updatedAt` | Date | Auto |
+
+#### Contact Collection
+
+| Field | Type | Constraints |
+|---|---|---|
+| `_id` | ObjectId | Auto-generated |
+| `userId` | ObjectId | Ref: User, indexed |
+| `profilePhoto` | String | Cloudinary URL |
+| `firstName` | String | Required, 2-50 chars |
+| `lastName` | String | Required, 2-50 chars |
+| `phone` | String | Required, validated |
+| `alternativePhone` | String | Optional |
+| `email` | String | Valid email format |
+| `company` | String | Optional, indexed |
+| `designation` | String | Optional |
+| `department` | String | Optional |
+| `category` | String | Enum: `personal`, `work`, `family`, `friend`, `other` |
+| `address` | String | Optional |
+| `city` | String | Optional, indexed |
+| `state` | String | Optional |
+| `country` | String | Optional |
+| `zipCode` | String | Optional |
+| `website` | String | Valid URL |
+| `linkedin` | String | Valid URL |
+| `birthday` | Date | Optional |
+| `notes` | String | Max 500 chars |
+| `tags` | [String] | Array of tag strings |
+| `isFavorite` | Boolean | Default: `false`, indexed |
+| `isBlocked` | Boolean | Default: `false` |
+| `isDeleted` | Boolean | Default: `false` (soft delete) |
+| `deletedAt` | Date | Soft delete timestamp |
+| `lastContacted` | Date | For "recently contacted" priority queue |
+| `contactCount` | Number | Interaction count |
+| `createdAt` | Date | Auto |
+| `updatedAt` | Date | Auto |
+
+**Indexes**: Compound index on `(userId, isDeleted)`, text index on `(firstName, lastName, email, company, phone)` for MongoDB full-text search fallback.
+
+#### SearchHistory Collection
+
+| Field | Type | Constraints |
+|---|---|---|
+| `_id` | ObjectId | Auto-generated |
+| `userId` | ObjectId | Ref: User |
+| `query` | String | The search term |
+| `resultCount` | Number | Number of results returned |
+| `createdAt` | Date | Auto |
+
+#### ActivityLog Collection
+
+| Field | Type | Constraints |
+|---|---|---|
+| `_id` | ObjectId | Auto-generated |
+| `userId` | ObjectId | Ref: User |
+| `action` | String | Enum: `create`, `update`, `delete`, `restore`, `import`, `export`, `login` |
+| `targetId` | ObjectId | Reference to affected entity |
+| `metadata` | Mixed | Additional context |
+| `createdAt` | Date | Auto |
+
+---
+
+### 3. C++ Algorithm Engine Design
+
+Each data structure maps to a specific feature. The engine communicates with Node.js via **stdin/stdout JSON protocol** (the Node.js backend spawns the C++ binary as a child process and exchanges JSON messages).
+
+| Data Structure | Feature | Time Complexity | Space Complexity | Why Used |
+|---|---|---|---|---|
+| **Trie** | Autocomplete & prefix search | O(L) insert/search, O(L + N) autocomplete | O(ALPHABET × L × N) | Fastest prefix matching — type "Jo" and instantly get "John", "Joseph", "Jordan" |
+| **HashMap** | Duplicate detection | O(1) avg lookup | O(N) | Hash phone/email → detect duplicates in O(1) before insert |
+| **Merge Sort** | Alphabetical sort | O(N log N) guaranteed | O(N) | Stable sort — preserves order of equal elements (important for contacts with same last name) |
+| **Quick Sort** | Sort by date/count | O(N log N) average | O(log N) | In-place sort, fast average case for numeric fields |
+| **Binary Search** | Search in sorted data | O(log N) | O(1) | After sorting, find contacts by name in O(log N) |
+| **Priority Queue** | Recently contacted | O(log N) insert/extract | O(N) | Max-heap by `lastContacted` — always shows most recent at top |
+| **Stack (LIFO)** | Undo delete | O(1) push/pop | O(N) | Last deleted contact is first to restore — natural undo behavior |
+| **Queue (FIFO)** | Search history | O(1) enqueue/dequeue | O(K) fixed size | Maintains last K searches in order — oldest auto-evicted |
+| **BST** | Alphabetical storage & range queries | O(log N) avg | O(N) | Ordered traversal gives sorted contacts; range queries like "all contacts A-M" |
+| **Graph** | Relationship suggestions (optional) | O(V + E) BFS/DFS | O(V + E) | Contacts sharing company/city form edges — suggest "people you may know" |
+
+**Communication Protocol**: Node.js sends JSON commands to the C++ binary's stdin, and reads JSON responses from stdout. Example:
+
+```json
+// Request
+{"action": "trie_search", "prefix": "Jo", "contacts": [...]}
+
+// Response  
+{"status": "ok", "results": ["John Doe", "Joseph Smith"], "time_ms": 0.3}
+```
+
+---
+
+### 4. Architecture Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| **Monorepo** | Single repo, 3 independent apps | Simplifies development, CI/CD, and deployment. Each part can run independently. |
+| **State Management** | Redux Toolkit | Centralized state for contacts, auth, UI. RTK Query for server state caching. |
+| **API Communication** | REST + Axios + TanStack Query | REST is simpler than GraphQL for CRUD. TanStack Query handles caching, refetching, pagination. |
+| **Auth** | JWT (access + refresh tokens) | Stateless auth. Access token (15min) + refresh token (7d) for security. |
+| **C++ Bridge** | child_process spawn | No native addons needed. C++ binary is standalone. Language-agnostic protocol via JSON over stdio. |
+| **File Uploads** | Multer → Cloudinary | Multer handles multipart parsing. Cloudinary provides CDN-backed image hosting with transformations. |
+| **Soft Deletes** | `isDeleted` flag + `deletedAt` | Enables undo/restore. Trash can feature. Permanent delete after 30 days. |
+| **Real-time** | Socket.io | Live updates when contacts are modified (multi-tab/device sync). |
+| **Dark Mode** | CSS variables + React context | Theme toggle with system preference detection. No flash of unstyled content. |
+
+---
+
+### 5. API Design (Full Specification)
+
+#### Authentication Routes
+
+| Method | Endpoint | Purpose | Auth |
+|---|---|---|---|
+| POST | `/api/v1/auth/register` | Register new user | Public |
+| POST | `/api/v1/auth/login` | Login with email/password | Public |
+| POST | `/api/v1/auth/refresh` | Refresh access token | Refresh Token |
+| POST | `/api/v1/auth/logout` | Invalidate refresh token | JWT |
+| POST | `/api/v1/auth/forgot-password` | Send OTP to email | Public |
+| POST | `/api/v1/auth/verify-otp` | Verify OTP | Public |
+| POST | `/api/v1/auth/reset-password` | Reset password with OTP | Public |
+| GET | `/api/v1/auth/verify-email/:token` | Verify email address | Public |
+| GET | `/api/v1/auth/me` | Get current user profile | JWT |
+| PUT | `/api/v1/auth/profile` | Update user profile | JWT |
+
+#### Contact Routes
+
+| Method | Endpoint | Purpose | Auth |
+|---|---|---|---|
+| POST | `/api/v1/contacts` | Create new contact | JWT |
+| GET | `/api/v1/contacts` | List contacts (paginated, filterable) | JWT |
+| GET | `/api/v1/contacts/:id` | Get single contact | JWT |
+| PUT | `/api/v1/contacts/:id` | Update contact | JWT |
+| DELETE | `/api/v1/contacts/:id` | Soft delete contact | JWT |
+| POST | `/api/v1/contacts/:id/restore` | Restore deleted contact | JWT |
+| DELETE | `/api/v1/contacts/bulk` | Bulk soft delete | JWT |
+| GET | `/api/v1/contacts/favorites` | List favorite contacts | JWT |
+| PUT | `/api/v1/contacts/:id/favorite` | Toggle favorite | JWT |
+| PUT | `/api/v1/contacts/:id/block` | Toggle block | JWT |
+| GET | `/api/v1/contacts/trash` | List deleted contacts | JWT |
+| GET | `/api/v1/contacts/duplicates` | Detect duplicate contacts (C++ engine) | JWT |
+
+#### Search Routes
+
+| Method | Endpoint | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/search` | Global search (C++ Trie) | JWT |
+| GET | `/api/v1/search/autocomplete` | Autocomplete suggestions (C++ Trie) | JWT |
+| GET | `/api/v1/search/history` | Get search history (C++ Queue) | JWT |
+
+#### Dashboard & Analytics Routes
+
+| Method | Endpoint | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/dashboard` | Dashboard summary stats | JWT |
+| GET | `/api/v1/dashboard/statistics` | Detailed analytics | JWT |
+| GET | `/api/v1/dashboard/charts` | Chart data (bar, pie, line) | JWT |
+| GET | `/api/v1/dashboard/activity` | Activity timeline | JWT |
+
+#### Import/Export Routes
+
+| Method | Endpoint | Purpose | Auth |
+|---|---|---|---|
+| POST | `/api/v1/contacts/import` | Import contacts (CSV/Excel/JSON) | JWT |
+| GET | `/api/v1/contacts/export/:format` | Export contacts (csv/excel/pdf/json) | JWT |
+
+---
+
+### 6. Documents to Create in Phase 1
+
+All diagrams will be created as Mermaid diagrams inside markdown files in the `docs/` folder:
+
+#### [NEW] docs/ER-Diagram/er-diagram.md
+ER diagram showing User, Contact, SearchHistory, and ActivityLog relationships.
+
+#### [NEW] docs/Flowchart/flowchart.md
+Application flow: Landing → Auth → Dashboard → Contact CRUD → Search → Analytics.
+
+#### [NEW] docs/Class-Diagram/class-diagram.md
+C++ engine class hierarchy: Contact, Trie, BST, HashMap, Stack, Queue, PriorityQueue, Sorting, Search.
+
+#### [NEW] docs/Sequence-Diagram/sequence-diagram.md
+Key workflows: Login, Create Contact, Search (with C++ engine), Delete & Undo.
+
+#### [NEW] docs/API-Documentation/api-docs.md
+Complete REST API specification with request/response examples.
+
+---
+
+### 7. Files to Create in Phase 1
+
+| # | File | Purpose |
+|---|---|---|
+| 1 | `README.md` (root) | Project overview, tech stack, setup guide |
+| 2 | `.gitignore` | Ignore node_modules, dist, .env, build artifacts |
+| 3 | `LICENSE` | MIT License |
+| 4 | `docs/ER-Diagram/er-diagram.md` | Entity-Relationship diagram |
+| 5 | `docs/Flowchart/flowchart.md` | Application flow diagrams |
+| 6 | `docs/Class-Diagram/class-diagram.md` | C++ class hierarchy |
+| 7 | `docs/Sequence-Diagram/sequence-diagram.md` | Key workflow sequences |
+| 8 | `docs/API-Documentation/api-docs.md` | Full API specification |
+| 9 | `frontend/README.md` | Frontend setup instructions |
+| 10 | `backend/README.md` | Backend setup instructions |
+| 11 | `cpp-engine/README.md` | C++ engine documentation |
+
+> [!NOTE]
+> Phase 1 creates **only documentation and folder structure**. No application code (React components, Express routes, C++ algorithms) is written until Phase 2+.
+
+---
+
+## Verification Plan
+
+### Manual Verification
+- All folders exist in the correct hierarchy
+- All documentation files render correctly with proper Mermaid diagrams
+- README contains accurate project description, tech stack, and setup instructions
+- ER diagram accurately represents the database schema
+- Class diagram covers all C++ data structures
+- API documentation matches the route design
+
+---
+
+## Phase Roadmap
+
+| Phase | Scope | Status |
+|---|---|---|
+| **Phase 1** | Requirements, Architecture, DB Design, Folder Structure, Docs | 🔶 Current |
+| Phase 2 | Frontend Setup (Vite + React + Tailwind + shadcn/ui) | ⬜ |
+| Phase 3 | Backend Setup (Express + MongoDB + Config) | ⬜ |
+| Phase 4 | Authentication (JWT + OTP + Email) | ⬜ |
+| Phase 5 | Database (Models + Seed Data) | ⬜ |
+| Phase 6 | Contact CRUD (Full API + Frontend) | ⬜ |
+| Phase 7 | C++ Algorithm Engine (All DSA implementations) | ⬜ |
+| Phase 8 | Frontend Integration (API ↔ UI) | ⬜ |
+| Phase 9 | Dashboard (Stats, Charts, Widgets) | ⬜ |
+| Phase 10 | Analytics (Chart.js, Statistics page) | ⬜ |
+| Phase 11 | Testing (Unit + Integration + E2E) | ⬜ |
+| Phase 12 | Deployment (Docker + CI/CD) | ⬜ |
+| Phase 13 | Optimization (Performance, SEO, Accessibility) | ⬜ |
+| Phase 14 | Final Documentation & Polish | ⬜ |

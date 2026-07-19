@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # Frontend - React + Vite
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api/v1
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # Backend - Node.js + Express
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - cpp-engine
+    volumes:
+      - backend-uploads:/app/src/uploads
+      - backend-logs:/app/src/logs
+    networks:
+      - app-network
+
+  # C++ Algorithm Engine
+  cpp-engine:
+    build:
+      context: ./cpp-engine
+      dockerfile: ../docker/Dockerfile.cpp-engine
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  backend-uploads:
+  backend-logs:
