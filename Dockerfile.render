@@ -28,7 +28,7 @@ RUN npm ci --production
 COPY backend/ .
 
 # Copy compiled C++ engine binary
-COPY --from=cpp-build /cpp-engine/build/contact-engine /app/cpp-engine/contact-engine
+COPY --from=cpp-build /cpp-engine/build/bin/contact-engine /app/cpp-engine/contact-engine
 RUN chmod +x /app/cpp-engine/contact-engine
 
 EXPOSE 5000
