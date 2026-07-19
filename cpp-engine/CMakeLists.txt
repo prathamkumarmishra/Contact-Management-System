@@ -10,16 +10,17 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # Locate local headers
 include_directories(include)
 
-# Collect all C++ source files
-file(GLOB_RECURSIVE SRC_FILES 
-    src/Contact/*.cpp
-    src/Trie/*.cpp
-    src/BST/*.cpp
-    src/HashMap/*.cpp
-    src/Stack/*.cpp
-    src/Queue/*.cpp
-    src/Sorting/*.cpp
-    src/Search/*.cpp
+# Collect all C++ source files explicitly
+set(SRC_FILES
+    src/Contact/Contact.cpp
+    src/Trie/Trie.cpp
+    src/BST/BST.cpp
+    src/HashMap/HashMap.cpp
+    src/Stack/Stack.cpp
+    src/Queue/PriorityQueue.cpp
+    src/Queue/Queue.cpp
+    src/Sorting/Sorting.cpp
+    src/Search/BinarySearch.cpp
     src/main.cpp
 )
 
