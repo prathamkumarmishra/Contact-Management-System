@@ -2,7 +2,7 @@
 import { cn } from '@/utils/cn';
 import ThemeToggle from './ThemeToggle';
 import NotificationPanel from './NotificationPanel';
-import { Search, Bell, Menu, Sparkles, Building2 } from 'lucide-react';
+import { Search, Menu, Sparkles, Building2 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
