@@ -34,3 +34,8 @@ export interface AuthResponse {
   accessToken: string;
   user: User;
 }
+
+export interface RegistrationResponse {
+  accessToken?: string;
+  user: User;
+}

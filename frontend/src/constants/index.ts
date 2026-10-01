@@ -2,7 +2,11 @@ export const APP_NAME = 'SmartContacts';
 export const APP_DESCRIPTION = 'Enterprise-Level Contact Management Platform';
 export const APP_VERSION = '1.0.0';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+// In development Vite proxies this path to the local API. In production,
+// VITE_API_URL must point to the deployed API (including `/api/v1`).
+// Removing a trailing slash prevents URLs such as `/api/v1//auth/login`.
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, '');
+export const API_BASE_URL = configuredApiUrl || '/api/v1';
 
 export const CATEGORIES = [
   { value: 'personal', label: 'Personal', color: '#6366f1' },

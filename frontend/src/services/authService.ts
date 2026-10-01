@@ -1,17 +1,23 @@
 import axiosInstance from '@/api/axiosInstance';
 import { ENDPOINTS } from '@/api/endpoints';
-import type { User, LoginCredentials, RegisterData, AuthResponse } from '@/types/auth';
+import type { User, LoginCredentials, RegisterData, AuthResponse, RegistrationResponse } from '@/types/auth';
 import type { ApiResponse } from '@/types/api';
 
 export const authService = {
   /**
    * Register new user account
    */
-  async register(data: RegisterData): Promise<ApiResponse<{ user: User }>> {
-    const response = await axiosInstance.post<ApiResponse<{ user: User }>>(
+  async register(data: RegisterData): Promise<ApiResponse<RegistrationResponse>> {
+    const response = await axiosInstance.post<ApiResponse<RegistrationResponse>>(
       ENDPOINTS.AUTH.REGISTER,
       data
     );
+
+    const { accessToken } = response.data.data;
+    if (accessToken) {
+      localStorage.setItem('accessToken', accessToken);
+    }
+
     return response.data;
   },
 

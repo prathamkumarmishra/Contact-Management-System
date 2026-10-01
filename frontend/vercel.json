@@ -1,5 +1,9 @@
 {
   "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://contact-management-system-17sz.onrender.com/api/:path*"
+    },
     { "source": "/(.*)", "destination": "/" }
   ]
 }

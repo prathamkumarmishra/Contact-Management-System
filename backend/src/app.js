@@ -14,9 +14,20 @@ const app = express();
 // Security Headers
 app.use(helmet());
 
-// CORS config
+const frontendOrigins = env.FRONTEND_URL
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+// CORS config. Multiple deployed frontend URLs (for example, a production
+// Vercel URL and localhost) can be supplied as a comma-separated FRONTEND_URL.
 app.use(cors({
-  origin: env.FRONTEND_URL,
+  origin(origin, callback) {
+    if (!origin || frontendOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Origin is not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

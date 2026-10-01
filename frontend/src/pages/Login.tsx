@@ -1,10 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { cn } from '@/utils/cn';
-import { LogIn, Mail, Lock, Sparkles, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { LogIn, Mail, Lock, Sparkles, Eye, EyeOff, Loader2, ShieldCheck, UsersRound } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 export default function Login() {
   const { login } = useAuth();
@@ -18,24 +19,25 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login({ email, password });
+      await login({ email: email.trim().toLowerCase(), password });
       toast.success('Signed in successfully!');
       navigate(ROUTES.DASHBOARD);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err.response?.data?.message || 'Invalid email or password');
+      toast.error(getApiErrorMessage(err, 'Invalid email or password'));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex gradient-mesh">
+    <div className="relative isolate min-h-screen overflow-hidden bg-[var(--bg-primary)] flex gradient-mesh">
+      <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-primary-500/15 blur-3xl" />
       {/* Left: Branding */}
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12 gradient-primary relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-        <div className="relative text-center">
+        <div className="relative max-w-md text-center">
           <div className="w-20 h-20 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-8 animate-float">
             <Sparkles className="w-10 h-10 text-white" />
           </div>
@@ -43,12 +45,24 @@ export default function Login() {
           <p className="text-lg text-white/70 max-w-md">
             Sign in to manage your contacts with lightning-fast C++ powered search and analytics.
           </p>
+          <div className="mt-10 grid grid-cols-2 gap-3 text-left">
+            <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
+              <ShieldCheck className="mb-2 h-5 w-5 text-cyan-200" />
+              <p className="text-sm font-semibold text-white">Secure access</p>
+              <p className="mt-1 text-xs leading-5 text-white/65">Protected sessions and encrypted passwords.</p>
+            </div>
+            <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
+              <UsersRound className="mb-2 h-5 w-5 text-cyan-200" />
+              <p className="text-sm font-semibold text-white">Everything together</p>
+              <p className="mt-1 text-xs leading-5 text-white/65">Your people, notes, and activity in one place.</p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Right: Form */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
-        <div className="w-full max-w-md animate-fade-in-up">
+      <div className="flex-1 flex items-center justify-center p-5 sm:p-10 lg:p-14">
+        <div className="w-full max-w-md animate-fade-in-up rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/85 p-6 shadow-2xl shadow-slate-950/10 backdrop-blur-xl sm:p-8">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center mb-8">
             <div className="flex items-center gap-3">
@@ -61,10 +75,15 @@ export default function Login() {
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Sign In</h2>
-          <p className="text-[var(--text-secondary)] mb-8">Enter your credentials to access your account</p>
+          <div className="mb-8">
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-primary-500/10 px-3 py-1 text-xs font-semibold text-primary-500">
+              <ShieldCheck className="h-3.5 w-3.5" /> Secure workspace
+            </span>
+            <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Welcome back</h2>
+            <p className="text-[var(--text-secondary)]">Enter your details to continue to your contacts.</p>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" aria-busy={isLoading}>
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
@@ -84,7 +103,9 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
+                  autoComplete="email"
                   required
+                  disabled={isLoading}
                   className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-tertiary)]"
                 />
               </div>
@@ -114,7 +135,9 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   required
+                  disabled={isLoading}
                   className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-tertiary)]"
                 />
                 <button
@@ -155,7 +178,7 @@ export default function Login() {
           </form>
 
           <p className="mt-6 text-center text-sm text-[var(--text-secondary)]">
-            Don't have an account?{' '}
+            New to SmartContacts?{' '}
             <Link to={ROUTES.REGISTER} className="text-primary-500 hover:text-primary-600 font-medium">
               Create Account
             </Link>

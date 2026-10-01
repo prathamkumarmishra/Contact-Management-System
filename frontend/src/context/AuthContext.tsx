@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { User, LoginCredentials } from '@/types/auth';
+import type { User, LoginCredentials, RegisterData } from '@/types/auth';
 import authService from '@/services/authService';
 
 interface AuthContextType {
@@ -7,6 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<User>;
+  register: (data: RegisterData) => Promise<{ user: User; isAuthenticated: boolean }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -55,6 +56,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const register = async (data: RegisterData) => {
+    setIsLoading(true);
+    try {
+      const response = await authService.register(data);
+      const isAuthenticated = Boolean(response.data.accessToken);
+      setUser(isAuthenticated ? response.data.user : null);
+      return { user: response.data.user, isAuthenticated };
+    } catch (error) {
+      setUser(null);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -76,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         login,
+        register,
         logout,
         refreshProfile
       }}

@@ -40,5 +40,6 @@ module.exports = {
   SMTP_PASS: process.env.SMTP_PASS,
   EMAIL_FROM: process.env.EMAIL_FROM,
   FRONTEND_URL: process.env.FRONTEND_URL,
+  REQUIRE_EMAIL_VERIFICATION: process.env.REQUIRE_EMAIL_VERIFICATION === 'true',
   CPP_ENGINE_PATH: process.env.CPP_ENGINE_PATH || path.join(__dirname, '../../../cpp-engine/build/contact-engine')
 };

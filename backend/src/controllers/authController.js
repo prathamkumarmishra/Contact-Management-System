@@ -3,13 +3,32 @@ const tokenUtils = require('../utils/tokenUtils');
 const responseHandler = require('../utils/responseHandler');
 const crypto = require('crypto');
 
-// Cookie options for refresh token
+const isProduction = process.env.NODE_ENV === 'production';
+
+// `none` is needed when the frontend and API are deployed on different sites
+// (for example, Vercel + Render). Secure is required by browsers for it.
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 };
+
+const clearCookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax'
+};
+
+const serializeUser = (user) => ({
+  id: user._id,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  email: user.email,
+  role: user.role,
+  avatar: user.avatar,
+  isVerified: user.isVerified
+});
 
 /**
  * Register User
@@ -24,11 +43,17 @@ exports.register = async (req, res, next) => {
       return responseHandler.error(res, 'Email address already registered', 'CONFLICT', null, 409);
     }
 
-    // Generate mock OTP (e.g. 123456 for easy local development, or random 6 digit)
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+    const requiresEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+    const otp = requiresEmailVerification
+      ? Math.floor(100000 + Math.random() * 900000).toString()
+      : null;
+    const otpExpiry = requiresEmailVerification
+      ? new Date(Date.now() + 15 * 60 * 1000)
+      : null;
 
-    // Create User (isVerified is false by default, but true in development/test for easy testing)
+    // Verification is opt-in until a real email delivery service is configured.
+    // Otherwise production accounts would be locked behind an OTP that users
+    // cannot receive.
     const user = await User.create({
       firstName,
       lastName,
@@ -36,23 +61,31 @@ exports.register = async (req, res, next) => {
       password, // Will be hashed via pre-save hook
       otp,
       otpExpiry,
-      isVerified: process.env.NODE_ENV !== 'production'
+      isVerified: !requiresEmailVerification
     });
 
-    console.log(`✉️ Email Mock Service: Verification OTP for ${email} is ${otp}`);
+    if (requiresEmailVerification) {
+      console.log(`✉️ Email Mock Service: Verification OTP for ${email} is ${otp}`);
+      return responseHandler.success(
+        res,
+        'Registration successful. Please verify your email with the OTP sent.',
+        { user: serializeUser(user) },
+        201
+      );
+    }
+
+    const accessToken = tokenUtils.generateAccessToken(user);
+    const refreshToken = tokenUtils.generateRefreshToken(user);
+    user.refreshToken = refreshToken;
+    await user.save();
+    res.cookie('refreshToken', refreshToken, cookieOptions);
 
     return responseHandler.success(
       res,
-      'Registration successful. Please verify your email with the OTP sent.',
+      'Registration successful',
       {
-        user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          role: user.role,
-          isVerified: user.isVerified
-        }
+        accessToken,
+        user: serializeUser(user)
       },
       201
     );
@@ -81,7 +114,7 @@ exports.login = async (req, res, next) => {
     }
 
     // Check if verified
-    if (!user.isVerified) {
+    if (process.env.REQUIRE_EMAIL_VERIFICATION === 'true' && !user.isVerified) {
       return responseHandler.error(
         res,
         'Please verify your email address before logging in.',
@@ -105,15 +138,7 @@ exports.login = async (req, res, next) => {
 
     return responseHandler.success(res, 'Login successful', {
       accessToken,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
-        isVerified: user.isVerified
-      }
+      user: serializeUser(user)
     });
   } catch (error) {
     next(error);
@@ -178,11 +203,7 @@ exports.logout = async (req, res, next) => {
     }
 
     // Clear client cookie
-    res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
-    });
+    res.clearCookie('refreshToken', clearCookieOptions);
 
     return responseHandler.success(res, 'Logged out successfully');
   } catch (error) {
@@ -432,11 +453,7 @@ exports.deleteAccount = async (req, res, next) => {
     await User.findByIdAndDelete(req.user.id);
 
     // Clear cookie
-    res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
-    });
+    res.clearCookie('refreshToken', clearCookieOptions);
 
     return responseHandler.success(res, 'Account deleted successfully');
   } catch (error) {
