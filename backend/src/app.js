@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const compression = require('compression');
 const env = require('./config/env');
@@ -32,6 +33,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Cookie Parser (populates req.cookies for refresh token handling)
+app.use(cookieParser());
 
 // Morgan HTTP request logging (only logs if not in test)
 if (env.NODE_ENV !== 'test') {
