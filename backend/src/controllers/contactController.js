@@ -95,19 +95,31 @@ exports.createContact = async (req, res, next) => {
     } = req.body;
 
     // 1. Check duplicate phone or email in C++ Engine in O(1) time
-    const dupCheck = await cppBridge.sendCommand('checkDuplicate', { phone, email: email || '' });
-    if (dupCheck.duplicate) {
-      const field = dupCheck.details.phone ? 'phone number' : 'email address';
-      return responseHandler.error(res, `Contact already exists with this ${field} in C++ Engine`, 'CONFLICT', null, 409);
+    try {
+      const dupCheck = await cppBridge.sendCommand('checkDuplicate', { phone, email: email || '' });
+      if (dupCheck && dupCheck.duplicate) {
+        const field = dupCheck.details?.phone ? 'phone number' : 'email address';
+        return responseHandler.error(res, `Contact already exists with this ${field} in C++ Engine`, 'CONFLICT', null, 409);
+      }
+    } catch (cppErr) {
+      console.warn('⚠️ C++ Engine checkDuplicate warning:', cppErr.message);
     }
 
     // 2. Process photo upload
     const profilePhoto = await uploadImage(req.file);
 
-    // Convert tags if string
+    // Convert tags safely
     let parsedTags = [];
     if (tags) {
-      parsedTags = typeof tags === 'string' ? JSON.parse(tags) : tags;
+      if (typeof tags === 'string') {
+        try {
+          parsedTags = JSON.parse(tags);
+        } catch (e) {
+          parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+        }
+      } else if (Array.isArray(tags)) {
+        parsedTags = tags;
+      }
     }
 
     // 3. Persist in MongoDB

@@ -27,7 +27,10 @@ export default function AddContact() {
 
       navigate(ROUTES.CONTACTS);
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to create contact';
+      const details = error.response?.data?.error?.details;
+      const message = (Array.isArray(details) && details.length > 0)
+        ? details.map((d: any) => `${d.field ? d.field + ': ' : ''}${d.message}`).join(', ')
+        : error.response?.data?.message || 'Failed to create contact';
 
       // Highlight C++ HashMap duplicate detection
       if (error.response?.status === 409) {

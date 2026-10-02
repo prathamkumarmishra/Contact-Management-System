@@ -49,7 +49,10 @@ export default function EditContact() {
       toast.success(`${updated.firstName} ${updated.lastName} updated successfully`);
       navigate(`/contacts/${id}`);
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Failed to update contact';
+      const details = err.response?.data?.error?.details;
+      const message = (Array.isArray(details) && details.length > 0)
+        ? details.map((d: any) => `${d.field ? d.field + ': ' : ''}${d.message}`).join(', ')
+        : err.response?.data?.message || 'Failed to update contact';
 
       if (err.response?.status === 409) {
         toast.error(`Duplicate detected by C++ HashMap: ${message}`);

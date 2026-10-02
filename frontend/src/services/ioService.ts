@@ -11,12 +11,7 @@ export const ioService = {
 
     const response = await axiosInstance.post<ApiResponse<{ importedCount: number; skippedCount: number }>>(
       '/io/import',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
+      formData
     );
     return response.data;
   },

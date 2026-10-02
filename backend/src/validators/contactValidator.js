@@ -65,12 +65,12 @@ const contactValidator = [
   body('website')
     .optional({ checkFalsy: true })
     .trim()
-    .isURL().withMessage('Please provide a valid website URL'),
+    .isURL({ require_protocol: false }).withMessage('Please provide a valid website URL'),
 
   body('linkedin')
     .optional({ checkFalsy: true })
     .trim()
-    .isURL().withMessage('Please provide a valid LinkedIn profile URL'),
+    .isURL({ require_protocol: false }).withMessage('Please provide a valid LinkedIn profile URL'),
 
   body('birthday')
     .optional({ checkFalsy: true })

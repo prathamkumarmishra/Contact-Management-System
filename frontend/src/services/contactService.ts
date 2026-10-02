@@ -46,12 +46,7 @@ export const contactService = {
 
     const response = await axiosInstance.post<ApiResponse<{ contact: Contact }>>(
       ENDPOINTS.CONTACTS.BASE,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
+      formData
     );
     return response.data;
   },
@@ -77,12 +72,7 @@ export const contactService = {
 
     const response = await axiosInstance.put<ApiResponse<{ contact: Contact }>>(
       ENDPOINTS.CONTACTS.DETAIL(id),
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
+      formData
     );
     return response.data;
   },
