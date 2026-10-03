@@ -20,11 +20,17 @@ const frontendOrigins = env.FRONTEND_URL
   .map(origin => origin.trim())
   .filter(Boolean);
 
+// Production deployments created by this project's Vercel integration use
+// names such as contact-management-system-abc123.vercel.app.  These URLs are
+// generated per deployment, so they cannot be listed statically in Render.
+const isProjectVercelOrigin = (origin) =>
+  /^https:\/\/contact-management-system(?:-[a-z0-9]+)?\.vercel\.app$/i.test(origin);
+
 // CORS config. Multiple deployed frontend URLs (for example, a production
 // Vercel URL and localhost) can be supplied as a comma-separated FRONTEND_URL.
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || frontendOrigins.includes(origin)) {
+    if (!origin || frontendOrigins.includes(origin) || isProjectVercelOrigin(origin)) {
       return callback(null, true);
     }
     return callback(new Error('Origin is not allowed by CORS'));
