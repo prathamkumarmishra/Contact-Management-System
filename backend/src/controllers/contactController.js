@@ -29,37 +29,50 @@ const uploadImage = async (file) => {
 };
 
 /**
+ * The C++ engine uses a compact representation of a contact.  Keeping this
+ * conversion in one place prevents the API response from depending on the
+ * engine's in-memory state.
+ */
+const formatContactForCpp = (contact) => ({
+  id: contact._id.toString(),
+  firstName: contact.firstName,
+  lastName: contact.lastName,
+  phone: contact.phone,
+  alternativePhone: contact.alternativePhone || '',
+  email: contact.email || '',
+  company: contact.company || '',
+  designation: contact.designation || '',
+  department: contact.department || '',
+  category: contact.category || 'personal',
+  city: contact.city || '',
+  state: contact.state || '',
+  country: contact.country || '',
+  zipCode: contact.zipCode || '',
+  website: contact.website || '',
+  linkedin: contact.linkedin || '',
+  birthday: contact.birthday ? contact.birthday.toISOString().split('T')[0] : '',
+  notes: contact.notes || '',
+  tags: contact.tags || [],
+  isFavorite: contact.isFavorite,
+  isBlocked: contact.isBlocked,
+  lastContacted: contact.lastContacted ? contact.lastContacted.toISOString() : '',
+  contactCount: contact.contactCount || 0,
+  createdAt: contact.createdAt.toISOString()
+});
+
+// The frontend consistently consumes `id`, while MongoDB documents expose `_id`.
+const serializeContact = (contact) => {
+  const value = typeof contact.toObject === 'function' ? contact.toObject() : contact;
+  return { ...value, id: value._id.toString() };
+};
+
+/**
  * Helper to sync all active contacts to C++ store (fallback fallback recovery)
  */
 const syncAllToCpp = async () => {
   try {
     const contacts = await Contact.find({ isDeleted: false });
-    const formatted = contacts.map(c => ({
-      id: c._id.toString(),
-      firstName: c.firstName,
-      lastName: c.lastName,
-      phone: c.phone,
-      alternativePhone: c.alternativePhone || '',
-      email: c.email || '',
-      company: c.company || '',
-      designation: c.designation || '',
-      department: c.department || '',
-      category: c.category || 'personal',
-      city: c.city || '',
-      state: c.state || '',
-      country: c.country || '',
-      zipCode: c.zipCode || '',
-      website: c.website || '',
-      linkedin: c.linkedin || '',
-      birthday: c.birthday ? c.birthday.toISOString().split('T')[0] : '',
-      notes: c.notes || '',
-      tags: c.tags || [],
-      isFavorite: c.isFavorite,
-      isBlocked: c.isBlocked,
-      lastContacted: c.lastContacted ? c.lastContacted.toISOString() : '',
-      contactCount: c.contactCount || 0,
-      createdAt: c.createdAt.toISOString()
-    }));
+    const formatted = contacts.map(formatContactForCpp);
     await cppBridge.sendCommand('load', formatted);
   } catch (err) {
     console.error('⚠️ Failed to sync active database list to C++:', err.message);
@@ -94,15 +107,20 @@ exports.createContact = async (req, res, next) => {
       isFavorite
     } = req.body;
 
-    // 1. Check duplicate phone or email in C++ Engine in O(1) time
-    try {
-      const dupCheck = await cppBridge.sendCommand('checkDuplicate', { phone, email: email || '' });
-      if (dupCheck && dupCheck.duplicate) {
-        const field = dupCheck.details?.phone ? 'phone number' : 'email address';
-        return responseHandler.error(res, `Contact already exists with this ${field} in C++ Engine`, 'CONFLICT', null, 409);
-      }
-    } catch (cppErr) {
-      console.warn('⚠️ C++ Engine checkDuplicate warning:', cppErr.message);
+    // MongoDB is the source of truth.  The C++ index is shared in memory and
+    // can restart, so it must never decide whether an API request succeeds.
+    const duplicateFields = [{ phone }];
+    if (email) {
+      duplicateFields.push({ email: email.trim().toLowerCase() });
+    }
+    const existingContact = await Contact.findOne({
+      userId: req.user.id,
+      isDeleted: false,
+      $or: duplicateFields
+    });
+    if (existingContact) {
+      const field = existingContact.phone === phone ? 'phone number' : 'email address';
+      return responseHandler.error(res, `Contact already exists with this ${field}`, 'CONFLICT', null, 409);
     }
 
     // 2. Process photo upload
@@ -149,34 +167,16 @@ exports.createContact = async (req, res, next) => {
     });
 
     // 4. Insert into C++ Engine memory structures (Trie, BST, HashMap, Heap)
-    const formatted = {
-      id: contact._id.toString(),
-      firstName: contact.firstName,
-      lastName: contact.lastName,
-      phone: contact.phone,
-      alternativePhone: contact.alternativePhone || '',
-      email: contact.email || '',
-      company: contact.company || '',
-      designation: contact.designation || '',
-      department: contact.department || '',
-      category: contact.category || 'personal',
-      city: contact.city || '',
-      state: contact.state || '',
-      country: contact.country || '',
-      zipCode: contact.zipCode || '',
-      website: contact.website || '',
-      linkedin: contact.linkedin || '',
-      birthday: contact.birthday ? contact.birthday.toISOString().split('T')[0] : '',
-      notes: contact.notes || '',
-      tags: contact.tags || [],
-      isFavorite: contact.isFavorite,
-      isBlocked: contact.isBlocked,
-      lastContacted: contact.lastContacted ? contact.lastContacted.toISOString() : '',
-      contactCount: contact.contactCount || 0,
-      createdAt: contact.createdAt.toISOString()
-    };
-    
-    await cppBridge.sendCommand('insert', formatted);
+    try {
+      const result = await cppBridge.sendCommand('insert', formatContactForCpp(contact));
+      if (result?.status === 'error') {
+        console.warn('⚠️ C++ Engine insert warning:', result.message || 'Unknown engine error');
+      }
+    } catch (cppErr) {
+      // The contact is already stored safely in MongoDB.  A later engine
+      // preload/resync will restore its optional search indexes.
+      console.warn('⚠️ C++ Engine insert warning:', cppErr.message);
+    }
 
     // Log Activity
     await ActivityLog.create({
@@ -195,7 +195,7 @@ exports.createContact = async (req, res, next) => {
       referenceId: contact._id
     }).catch(err => console.error('Notification create error:', err.message));
 
-    return responseHandler.success(res, 'Contact created successfully', { contact }, 201);
+    return responseHandler.success(res, 'Contact created successfully', { contact: serializeContact(contact) }, 201);
   } catch (error) {
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
@@ -205,7 +205,7 @@ exports.createContact = async (req, res, next) => {
 };
 
 /**
- * Get Contacts (Paginated & Sorted via C++ BST and Sorting Algorithms)
+ * Get Contacts (paginated and scoped to the authenticated user)
  */
 exports.getContacts = async (req, res, next) => {
   try {
@@ -214,56 +214,51 @@ exports.getContacts = async (req, res, next) => {
       limit = 20,
       sort = 'firstName', // Sort by firstName (BST) by default
       category,
+      company,
+      city,
       isFavorite,
       isBlocked,
       q
     } = req.query;
 
-    // 1. Fetch sorted list from C++ engine (Merge/Quick sort bindings)
-    const cppSortField = sort.startsWith('-') ? sort.substring(1) : sort;
-    const cppSortOrder = sort.startsWith('-') ? 'desc' : 'asc';
-
-    const cppResult = await cppBridge.sendCommand('getSorted', {
-      field: cppSortField,
-      order: cppSortOrder
-    });
-
-    let contactsList = cppResult.contacts || [];
-
-    // 2. Perform filters in Node.js layer on the sorted C++ results list
-    if (category) {
-      contactsList = contactsList.filter(c => c.category === category);
-    }
-    if (isFavorite) {
-      contactsList = contactsList.filter(c => c.isFavorite === (isFavorite === 'true'));
-    }
-    if (isBlocked) {
-      contactsList = contactsList.filter(c => c.isBlocked === (isBlocked === 'true'));
-    }
-    if (q) {
-      const searchKey = q.toLowerCase();
-      contactsList = contactsList.filter(c =>
-        c.firstName.toLowerCase().includes(searchKey) ||
-        c.lastName.toLowerCase().includes(searchKey) ||
-        c.email.toLowerCase().includes(searchKey) ||
-        c.company.toLowerCase().includes(searchKey) ||
-        c.phone.includes(searchKey)
-      );
-    }
-
-    // 3. Paginate
     const options = {
-      page: parseInt(page),
-      limit: parseInt(limit)
+      page: Math.max(parseInt(page, 10) || 1, 1),
+      limit: Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100)
     };
+    const requestedSort = typeof sort === 'string' ? sort : 'firstName';
+    const sortField = requestedSort.startsWith('-') ? requestedSort.slice(1) : requestedSort;
+    const allowedSortFields = new Set(['firstName', 'lastName', 'email', 'company', 'phone', 'birthday', 'contactCount', 'createdAt']);
+    const safeSortField = allowedSortFields.has(sortField) ? sortField : 'firstName';
+    const query = { userId: req.user.id, isDeleted: false };
 
-    const total = contactsList.length;
+    if (category) query.category = category;
+    if (company) query.company = company;
+    if (city) query.city = city;
+    if (isFavorite !== undefined) query.isFavorite = String(isFavorite) === 'true';
+    if (isBlocked !== undefined) query.isBlocked = String(isBlocked) === 'true';
+    if (q && String(q).trim()) {
+      const escapedQuery = String(q).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const search = new RegExp(escapedQuery, 'i');
+      query.$or = [
+        { firstName: search },
+        { lastName: search },
+        { email: search },
+        { company: search },
+        { phone: search }
+      ];
+    }
+
+    const [contactsList, total] = await Promise.all([
+      Contact.find(query)
+        .sort({ [safeSortField]: requestedSort.startsWith('-') ? -1 : 1, _id: 1 })
+        .skip((options.page - 1) * options.limit)
+        .limit(options.limit),
+      Contact.countDocuments(query)
+    ]);
     const totalPages = Math.ceil(total / options.limit);
-    const skip = (options.page - 1) * options.limit;
-    const paginatedContacts = contactsList.slice(skip, skip + options.limit);
 
-    return responseHandler.success(res, 'Contacts retrieved successfully via C++ sorting engine', {
-      contacts: paginatedContacts,
+    return responseHandler.success(res, 'Contacts retrieved successfully', {
+      contacts: contactsList.map(serializeContact),
       pagination: {
         page: options.page,
         limit: options.limit,
