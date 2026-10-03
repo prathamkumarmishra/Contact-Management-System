@@ -58,6 +58,15 @@ app.use(compression());
 // Base rate limiting on API routes
 app.use('/api', apiLimiter);
 
+// Root endpoint for hosting platforms and a quick browser health check.
+app.get('/', (req, res) => {
+  return responseHandler.success(res, 'Smart Contacts API is running', {
+    status: 'UP',
+    healthCheck: '/health',
+    apiBase: '/api/v1'
+  });
+});
+
 // Root health check endpoint
 app.get('/health', (req, res) => {
   return responseHandler.success(res, 'Server is healthy', {
