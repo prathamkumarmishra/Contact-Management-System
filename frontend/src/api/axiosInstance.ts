@@ -11,6 +11,16 @@ export const axiosInstance = axios.create({
   withCredentials: true, // Enable sending cookie tokens (for Refresh Token)
 });
 
+// When the request body is FormData (file uploads, multipart forms), delete
+// the default Content-Type so the browser sets `multipart/form-data` with the
+// correct boundary automatically.
+axiosInstance.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+  return config;
+});
+
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value: unknown) => void;
