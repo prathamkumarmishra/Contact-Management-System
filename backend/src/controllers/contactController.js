@@ -337,36 +337,12 @@ exports.updateContact = async (req, res, next) => {
     );
 
     // Sync updates to C++ Engine (deletes original and re-inserts updated copy)
-    await cppBridge.sendCommand('delete', { id: contact._id.toString() });
-    
-    const formatted = {
-      id: updatedContact._id.toString(),
-      firstName: updatedContact.firstName,
-      lastName: updatedContact.lastName,
-      phone: updatedContact.phone,
-      alternativePhone: updatedContact.alternativePhone || '',
-      email: updatedContact.email || '',
-      company: updatedContact.company || '',
-      designation: updatedContact.designation || '',
-      department: updatedContact.department || '',
-      category: updatedContact.category || 'personal',
-      city: updatedContact.city || '',
-      state: updatedContact.state || '',
-      country: updatedContact.country || '',
-      zipCode: updatedContact.zipCode || '',
-      website: updatedContact.website || '',
-      linkedin: updatedContact.linkedin || '',
-      birthday: updatedContact.birthday ? updatedContact.birthday.toISOString().split('T')[0] : '',
-      notes: updatedContact.notes || '',
-      tags: updatedContact.tags || [],
-      isFavorite: updatedContact.isFavorite,
-      isBlocked: updatedContact.isBlocked,
-      lastContacted: updatedContact.lastContacted ? updatedContact.lastContacted.toISOString() : '',
-      contactCount: updatedContact.contactCount || 0,
-      createdAt: updatedContact.createdAt.toISOString()
-    };
-    
-    await cppBridge.sendCommand('insert', formatted);
+    try {
+      await cppBridge.sendCommand('delete', { id: contact._id.toString() });
+      await cppBridge.sendCommand('insert', formatContactForCpp(updatedContact));
+    } catch (cppErr) {
+      console.warn('⚠️ C++ Engine update sync warning:', cppErr.message);
+    }
 
     // Log Activity
     await ActivityLog.create({
@@ -410,7 +386,11 @@ exports.deleteContact = async (req, res, next) => {
     }
 
     // Sync to C++ Engine (deletes from active Trie/BST and pushes to LIFO Undo Stack)
-    await cppBridge.sendCommand('delete', { id: contact._id.toString() });
+    try {
+      await cppBridge.sendCommand('delete', { id: contact._id.toString() });
+    } catch (cppErr) {
+      console.warn('⚠️ C++ Engine delete sync warning:', cppErr.message);
+    }
 
     // Log Activity
     await ActivityLog.create({
@@ -495,33 +475,11 @@ exports.restoreContact = async (req, res, next) => {
     }
 
     // Insert back to active C++ structures
-    const formatted = {
-      id: contact._id.toString(),
-      firstName: contact.firstName,
-      lastName: contact.lastName,
-      phone: contact.phone,
-      alternativePhone: contact.alternativePhone || '',
-      email: contact.email || '',
-      company: contact.company || '',
-      designation: contact.designation || '',
-      department: contact.department || '',
-      category: contact.category || 'personal',
-      city: contact.city || '',
-      state: contact.state || '',
-      country: contact.country || '',
-      zipCode: contact.zipCode || '',
-      website: contact.website || '',
-      linkedin: contact.linkedin || '',
-      birthday: contact.birthday ? contact.birthday.toISOString().split('T')[0] : '',
-      notes: contact.notes || '',
-      tags: contact.tags || [],
-      isFavorite: contact.isFavorite,
-      isBlocked: contact.isBlocked,
-      lastContacted: contact.lastContacted ? contact.lastContacted.toISOString() : '',
-      contactCount: contact.contactCount || 0,
-      createdAt: contact.createdAt.toISOString()
-    };
-    await cppBridge.sendCommand('insert', formatted);
+    try {
+      await cppBridge.sendCommand('insert', formatContactForCpp(contact));
+    } catch (cppErr) {
+      console.warn('⚠️ C++ Engine restore sync warning:', cppErr.message);
+    }
 
     // Log Activity
     await ActivityLog.create({
@@ -594,35 +552,12 @@ exports.toggleFavorite = async (req, res, next) => {
     await contact.save();
 
     // Update C++ Store memory values
-    await cppBridge.sendCommand('delete', { id: contact._id.toString() });
-    
-    const formatted = {
-      id: contact._id.toString(),
-      firstName: contact.firstName,
-      lastName: contact.lastName,
-      phone: contact.phone,
-      alternativePhone: contact.alternativePhone || '',
-      email: contact.email || '',
-      company: contact.company || '',
-      designation: contact.designation || '',
-      department: contact.department || '',
-      category: contact.category || 'personal',
-      city: contact.city || '',
-      state: contact.state || '',
-      country: contact.country || '',
-      zipCode: contact.zipCode || '',
-      website: contact.website || '',
-      linkedin: contact.linkedin || '',
-      birthday: contact.birthday ? contact.birthday.toISOString().split('T')[0] : '',
-      notes: contact.notes || '',
-      tags: contact.tags || [],
-      isFavorite: contact.isFavorite,
-      isBlocked: contact.isBlocked,
-      lastContacted: contact.lastContacted ? contact.lastContacted.toISOString() : '',
-      contactCount: contact.contactCount || 0,
-      createdAt: contact.createdAt.toISOString()
-    };
-    await cppBridge.sendCommand('insert', formatted);
+    try {
+      await cppBridge.sendCommand('delete', { id: contact._id.toString() });
+      await cppBridge.sendCommand('insert', formatContactForCpp(contact));
+    } catch (cppErr) {
+      console.warn('⚠️ C++ Engine favorite sync warning:', cppErr.message);
+    }
 
     return responseHandler.success(
       res,
@@ -648,35 +583,12 @@ exports.toggleBlock = async (req, res, next) => {
     await contact.save();
 
     // Update C++ Store memory values
-    await cppBridge.sendCommand('delete', { id: contact._id.toString() });
-    
-    const formatted = {
-      id: contact._id.toString(),
-      firstName: contact.firstName,
-      lastName: contact.lastName,
-      phone: contact.phone,
-      alternativePhone: contact.alternativePhone || '',
-      email: contact.email || '',
-      company: contact.company || '',
-      designation: contact.designation || '',
-      department: contact.department || '',
-      category: contact.category || 'personal',
-      city: contact.city || '',
-      state: contact.state || '',
-      country: contact.country || '',
-      zipCode: contact.zipCode || '',
-      website: contact.website || '',
-      linkedin: contact.linkedin || '',
-      birthday: contact.birthday ? contact.birthday.toISOString().split('T')[0] : '',
-      notes: contact.notes || '',
-      tags: contact.tags || [],
-      isFavorite: contact.isFavorite,
-      isBlocked: contact.isBlocked,
-      lastContacted: contact.lastContacted ? contact.lastContacted.toISOString() : '',
-      contactCount: contact.contactCount || 0,
-      createdAt: contact.createdAt.toISOString()
-    };
-    await cppBridge.sendCommand('insert', formatted);
+    try {
+      await cppBridge.sendCommand('delete', { id: contact._id.toString() });
+      await cppBridge.sendCommand('insert', formatContactForCpp(contact));
+    } catch (cppErr) {
+      console.warn('⚠️ C++ Engine favorite sync warning:', cppErr.message);
+    }
 
     return responseHandler.success(
       res,

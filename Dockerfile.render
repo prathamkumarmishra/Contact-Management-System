@@ -1,15 +1,15 @@
 # ============================================
 # Stage 1: Build C++ Algorithm Engine
 # ============================================
-FROM gcc:13 AS cpp-build
+FROM node:20-slim AS cpp-build
 
 WORKDIR /cpp-engine
 
-RUN apt-get update && apt-get install -y cmake git
+RUN apt-get update && apt-get install -y g++ cmake make git && rm -rf /var/lib/apt/lists/*
 
 COPY cpp-engine/ .
 
-RUN mkdir -p build && cd build && cmake .. && cmake --build . -j$(nproc)
+RUN mkdir -p build && cd build && cmake .. -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++" && cmake --build . -j$(nproc)
 
 # ============================================
 # Stage 2: Build Backend + Bundle C++ Binary

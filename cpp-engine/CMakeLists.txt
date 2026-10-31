@@ -27,5 +27,10 @@ set(SRC_FILES
 # Output build targets
 add_executable(contact-engine ${SRC_FILES})
 
+# Static link libstdc++ and libgcc on Linux for portability across environments
+if(UNIX AND NOT APPLE)
+    target_link_options(contact-engine PRIVATE -static-libgcc -static-libstdc++)
+endif()
+
 # Copy headers configurations if needed
 target_compile_definitions(contact-engine PRIVATE VERSION="1.0.0")

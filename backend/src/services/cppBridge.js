@@ -12,6 +12,16 @@ class CppBridge {
   }
 
   /**
+   * Reject and clear all pending promises in queue
+   */
+  clearQueue(error) {
+    while (this.responseQueue.length > 0) {
+      const { reject } = this.responseQueue.shift();
+      reject(error);
+    }
+  }
+
+  /**
    * Spawn C++ Child Process
    */
   init() {
@@ -39,6 +49,21 @@ class CppBridge {
         stdio: ['pipe', 'pipe', 'pipe']
       });
 
+      // Handle spawn error directly on childProcess
+      this.childProcess.on('error', (err) => {
+        console.error('❌ C++ Process Error:', err.message);
+        this.isInitialized = false;
+        this.childProcess = null;
+        this.clearQueue(new Error(`C++ process error: ${err.message}`));
+      });
+
+      // Protect against EPIPE crashes on stdin
+      if (this.childProcess.stdin) {
+        this.childProcess.stdin.on('error', (err) => {
+          console.error('⚠️ C++ stdin stream error (EPIPE prevented):', err.message);
+        });
+      }
+
       // Handle output streams
       this.childProcess.stdout.setEncoding('utf-8');
       this.childProcess.stdout.on('data', (data) => this.handleData(data));
@@ -51,12 +76,7 @@ class CppBridge {
         console.warn(`⚠️ C++ child process exited with code ${code}`);
         this.childProcess = null;
         this.isInitialized = false;
-        
-        // Reject all outstanding requests in queue
-        while (this.responseQueue.length > 0) {
-          const { reject } = this.responseQueue.shift();
-          reject(new Error('C++ process terminated unexpectedly'));
-        }
+        this.clearQueue(new Error(`C++ process terminated unexpectedly (exit code ${code})`));
       });
 
       this.isInitialized = true;
@@ -109,13 +129,26 @@ class CppBridge {
         }
       }
 
+      if (!this.childProcess.stdin || !this.childProcess.stdin.writable) {
+        return reject(new Error('C++ child process stdin is not writable'));
+      }
+
       const payload = JSON.stringify({ command, params }) + '\n';
       
       // Store callbacks
       this.responseQueue.push({ resolve, reject });
 
-      // Write to C++ stdin
-      this.childProcess.stdin.write(payload);
+      // Write to C++ stdin with error callback
+      this.childProcess.stdin.write(payload, (err) => {
+        if (err) {
+          console.error('⚠️ Failed to write to C++ stdin:', err.message);
+          const idx = this.responseQueue.findIndex(p => p.reject === reject);
+          if (idx !== -1) {
+            this.responseQueue.splice(idx, 1);
+          }
+          reject(err);
+        }
+      });
     });
   }
 
@@ -124,10 +157,17 @@ class CppBridge {
    */
   close() {
     if (this.childProcess) {
-      this.childProcess.stdin.end();
-      this.childProcess.kill();
+      try {
+        if (this.childProcess.stdin) {
+          this.childProcess.stdin.end();
+        }
+        this.childProcess.kill();
+      } catch (err) {
+        // ignore
+      }
       this.childProcess = null;
       this.isInitialized = false;
+      this.clearQueue(new Error('C++ bridge closed'));
     }
   }
 }
